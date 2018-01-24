@@ -2,6 +2,7 @@ package edu.esipe.i3.ezipflix.frontend;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import edu.esipe.i3.ezipflix.frontend.data.services.VideoConversion;
+import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.*;
@@ -17,6 +18,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 /**
  * Created by Gilles GIRAUD gil on 11/4/17.
@@ -25,7 +30,8 @@ import org.springframework.web.bind.annotation.*;
 @SpringBootApplication
 @RestController
 @EnableRabbit
-public class VideoDispatcher {
+@EnableWebSocket
+public class VideoDispatcher implements WebSocketConfigurer {
 
     // rabbitmqadmin -H localhost -u ezip -p pize -V ezip delete queue name=video-conversion-queue
     // rabbitmqadmin -H localhost -u ezip -p pize -V ezip delete exchange name=video-conversion-exchange
@@ -34,6 +40,7 @@ public class VideoDispatcher {
     // sudo rabbitmqadmin -u ezip -p pize -V ezip declare binding source="video-conversion-exchange" destination_type="queue" destination="video-conversion-queue" routing_key="video-conversion-queue"
     // MONGO : db.video_conversions.remove({})
 
+    //sudo rabbitmq-server start
     private static final Logger LOGGER = LoggerFactory.getLogger(VideoDispatcher.class);
 
     @Value("${rabbitmq-server.credentials.username}") private String username;
@@ -72,6 +79,15 @@ public class VideoDispatcher {
         c.setUsername(username);
         c.setPassword(password);
         return c;
+    }
+
+    @Bean
+    public WebSocketHandler videoStatusHandler() {
+        return new VideoStatusHandler();
+    }
+
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
+        webSocketHandlerRegistry.addHandler(videoStatusHandler(), "/video_status");
     }
 
 
